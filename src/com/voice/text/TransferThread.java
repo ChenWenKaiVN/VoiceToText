@@ -32,6 +32,16 @@ public class TransferThread implements Callable<Integer> {
 		this.voicePath = voicePath;
 		this.textPath = textPath;
 	}
+	
+	public TransferThread(Text logDetailText, String datePrefix, String voicePath, String textPath) {
+		this.logDetailText = logDetailText;
+		this.datePrefix = datePrefix;
+		this.voicePath = voicePath;
+		this.textPath = textPath;
+	}
+	
+	
+	
 	@Override
 	public Integer call() throws Exception {
 		// 初始化LFASRClient实例

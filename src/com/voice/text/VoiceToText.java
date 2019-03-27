@@ -1,10 +1,5 @@
 package com.voice.text;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.StatusLineManager;
 import org.eclipse.jface.action.ToolBarManager;
@@ -16,25 +11,23 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.FileDialog;
-import org.eclipse.swt.widgets.ProgressBar;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.wb.swt.SWTResourceManager;
+import org.eclipse.swt.widgets.Label;
 
 public class VoiceToText extends ApplicationWindow {
-	
-	DateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-	private String datePrefix = df.format(new Date()) + ":  ";
-	final CountDownLatch countDownLatch = new CountDownLatch(1);
+		
 	private String voicePath;
 	private String textPath;
 	private Text voicePathText;
 	private Text textPathText;
 	private Text logDetailText;
 	private Text logText;
+	private String outputPath;
 
 	/**
 	 * Create the application window.
@@ -57,7 +50,7 @@ public class VoiceToText extends ApplicationWindow {
 		
 		//输入目录按钮以及路径设置
 		Button voiceInputButton = new Button(container, SWT.NONE);
-		voiceInputButton.setBounds(123, 47, 117, 27);
+		voiceInputButton.setBounds(123, 77, 114, 27);
 		voiceInputButton.setText("输入音频文件");
 		voiceInputButton.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -69,19 +62,19 @@ public class VoiceToText extends ApplicationWindow {
 				if(selected == null){
 					return;
 				}
-				voicePathText.setText(selected);
-				String log = datePrefix + "您选中的音频文件路径为：" + selected;
-				System.out.println(log);
-				logDetailText.append(log + "\n");
+				voicePathText.setText(selected);				
+				logDetailText.append(DateUtils.getDataPrefix() + "您选中的音频文件路径为：" + selected + "\n");
 			}
 		});
 		
 		
 		voicePathText = new Text(container, SWT.BORDER);
-		voicePathText.setBounds(280, 49, 482, 23);
+		voicePathText.setBounds(280, 79, 482, 23);
 		
 		//输出文本以及路径设置
 		Button textOutputButton = new Button(container, SWT.NONE);
+		textOutputButton.setBounds(123, 131, 114, 27);
+		textOutputButton.setText("输出文本目录");
 		textOutputButton.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -92,73 +85,32 @@ public class VoiceToText extends ApplicationWindow {
 				String selecteddir=folderdlg.open();
 				if(selecteddir == null){
 					return;
-				}else{
-					System.out.println("您选中的文本输出文件夹为：" + selecteddir);
-				}
-				String log = datePrefix + "您选中的文本输出文件夹为：" + selecteddir;
+				}				
 				textPathText.setText(selecteddir);	
-				logDetailText.append(log + "\n");
+				logDetailText.append(DateUtils.getDataPrefix() + "您选中的文本输出文件夹为：" + selecteddir + "\n");
 			}
 		});
-		textOutputButton.setBounds(126, 107, 114, 27);
-		textOutputButton.setText("输出文本目录");
-		
+				
 		textPathText = new Text(container, SWT.BORDER);
-		textPathText.setBounds(280, 107, 482, 25);
+		textPathText.setBounds(280, 133, 482, 25);
 		
 		//开始转换按钮
 		Button startThansfer = new Button(container, SWT.NONE);
+		startThansfer.setBounds(340, 185, 283, 27);
+		startThansfer.setText("开始转换");
 		startThansfer.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				logDetailText.append(datePrefix + "开始转换........" + "\n");
-				startThansfer.setEnabled(false);
+				logDetailText.append(DateUtils.getDataPrefix() + "开始转换........" + "\n");
 				voicePath = voicePathText.getText();
-				textPath = textPathText.getText();									
-				int status = 0;					
-				Callable<Integer> f = new TransferThread(logDetailText, countDownLatch, datePrefix, voicePath, textPath);
-				//Callable<Integer> f = new TransferThreadAsyc(parent, logDetailText, countDownLatch, datePrefix, voicePath, textPath);
-//				parent.getDisplay().asyncExec(new Runnable() {					
-//					@Override
-//					public void run() {
-//						// TODO Auto-generated method stub
-//						for(int i=0; i<20; i++){
-//							try {
-//								Thread.sleep(1000);
-//							} catch (InterruptedException e) {
-//								// TODO Auto-generated catch block
-//								e.printStackTrace();
-//							}
-//							logDetailText.append(datePrefix + "doing" + "\n");
-//						}
-//					}
-//				});
-				try {
-					status = f.call();
-				} catch (Exception e2) {
-					// TODO Auto-generated catch block
-					e2.printStackTrace();
-				}												
-				try {
-					countDownLatch.await();
-				} catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}				
-				if(status == 1){
-					logDetailText.append(datePrefix + "转换完成" + "\n");
-				}else{
-					logDetailText.append(datePrefix + "转换失败" + "\n");
-				}						
-				startThansfer.setEnabled(true);
+				textPath = textPathText.getText();
+				outputPath = textPath + "\\" + System.currentTimeMillis() + ".txt";
+				new Thread(new TransferThreadRunnable(parent, logDetailText, voicePath, textPath, startThansfer, outputPath)).start();				
 			}
 		});
-		startThansfer.setBounds(340, 177, 283, 27);
-		startThansfer.setText("开始转换");
-		
-		
+				
 		logDetailText = new Text(container, SWT.BORDER | SWT.MULTI | SWT.V_SCROLL);
-		logDetailText.setBounds(43, 254, 805, 273);
+		logDetailText.setBounds(43, 254, 805, 298);
 		
 		logText = new Text(container, SWT.BORDER);
 		logText.setForeground(SWTResourceManager.getColor(SWT.COLOR_BLACK));
